@@ -1,0 +1,22 @@
+{
+    "name": "iota-database-tutorial",
+    "version": "1.0.0",
+    "description": "Use IOTA Tangle as a storage mechanism like a database.",
+    "main": "tutorial.js",
+    "scripts": {
+        "build": "tsc"
+    },
+    "author": "martyn@iota.eco",
+    "license": "MIT",
+    "dependencies": {
+        "ccurl.interface.js": "0.0.9",
+        "chalk": "^2.4.1",
+        "iota.lib.js": "^0.4.7",
+        "minimist": "^1.2.0"
+    },
+    "devDependencies": {
+        "@types/chalk": "^2.2.0",
+        "@types/minimist": "^1.2.0",
+        "@types/node": "^9.6.6"
+    }
+}
