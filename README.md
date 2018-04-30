@@ -23,7 +23,7 @@ The first step in using the tangle to store your objects is to create the databa
 We do this by running the following command:
 
 ```shell
-node tutorial init --seed=999...999 --tables=tableName1,tableName2
+node ./dist/tutorial init --seed=999...999 --tables=tableName1,tableName2
 ```
 
 The parameters are as follows:
@@ -33,7 +33,7 @@ The parameters are as follows:
 ### Examples
 
 ```shell
-node tutorial init --seed=CWLPJMQYVDJGCVTY9KLMXE9SOQKLUHOCPZIRFSMW9FLMHM9YGA9G9OOJOLVYIAFUOJDVQ9EADWFXYROSN --tables=people,places
+node ./dist/tutorial init --seed=CWLPJMQYVDJGCVTY9KLMXE9SOQKLUHOCPZIRFSMW9FLMHM9YGA9G9OOJOLVYIAFUOJDVQ9EADWFXYROSN --tables=people,places
 ```
 
 Would result in the file db-config.json being written with the following data:
@@ -58,7 +58,7 @@ Now that we have generated our configuration we can add some data to the tangle.
 We do this by running the following command:
 
 ```shell
-node tutorial create --table=tableName1 --data=path --tag=tag
+node ./dist/tutorial create --table=tableName1 --data=path --tag=tag
 ```
 
 The parameters are as follows:
@@ -71,9 +71,9 @@ The parameters are as follows:
 ### Examples
 
 ```shell
-node tutorial create --table=people --data=./data/object1.json
+node ./dist/tutorial create --table=people --data=./data/object1.json
 
-node tutorial create --table=people --data=./data/object2.json --tag=MYDATA
+node ./dist/tutorial create --table=people --data=./data/object2.json --tag=MYDATA
 ```
 
 This will add two objects to the database and update the index accordingly. You will be presented with links to the new objects on the tangle which you can open in your browser.
@@ -93,7 +93,7 @@ Given that we now have data in our database we can retreive the index of all the
 We do this by running the following command:
 
 ```shell
-node tutorial index --table=tableName1
+node ./dist/tutorial index --table=tableName1
 ```
 
 The parameters are as follows:
@@ -103,7 +103,7 @@ The parameters are as follows:
 ### Examples
 
 ```shell
-node tutorial index --table=people
+node ./dist/tutorial index --table=people
 ```
 
 You should get a response similar to the following.
@@ -121,7 +121,7 @@ We can retrieve the json data for all the objects in our database tables, or a s
 We do this by running the following command:
 
 ```shell
-node tutorial read --table=tableName1 --ids=ids
+node ./dist/tutorial read --table=tableName1 --ids=ids
 ```
 
 The parameters are as follows:
@@ -132,8 +132,8 @@ The parameters are as follows:
 ### Examples
 
 ```shell
-node tutorial read --table=people
-node tutorial read --table=people --ids=WCTH9JEBYVKDXDEJBOVXFKWJLK9AHZJXWDIFVCNIBCTFIHKWVQFGQCQLLJGXZ9EWDTYNRGXFBGSFGXQEB
+node ./dist/tutorial read --table=people
+node ./dist/tutorial read --table=people --ids=WCTH9JEBYVKDXDEJBOVXFKWJLK9AHZJXWDIFVCNIBCTFIHKWVQFGQCQLLJGXZ9EWDTYNRGXFBGSFGXQEB
 ```
 
 You should get a responses similar to the following.
@@ -166,7 +166,7 @@ Updating data is very similar to adding the data, it just removes the old id of 
 We do this by running the following command:
 
 ```shell
-node tutorial update --table=tableName1 --data=path --tag=tag --id=id
+node ./dist/tutorial update --table=tableName1 --data=path --tag=tag --id=id
 ```
 
 The parameters are as follows:
@@ -180,7 +180,7 @@ The parameters are as follows:
 ### Examples
 
 ```shell
-node tutorial update --table=people --data=./data/object1b.json --id=WCTH9JEBYVKDXDEJBOVXFKWJLK9AHZJXWDIFVCNIBCTFIHKWVQFGQCQLLJGXZ9EWDTYNRGXFBGSFGXQEB
+node ./dist/tutorial update --table=people --data=./data/object1b.json --id=WCTH9JEBYVKDXDEJBOVXFKWJLK9AHZJXWDIFVCNIBCTFIHKWVQFGQCQLLJGXZ9EWDTYNRGXFBGSFGXQEB
 ```
 
 As with the create command you will be produced links to the tangle to view the new data.
@@ -192,7 +192,7 @@ Deleting data simply removed the hash of the given item from the index, nothing 
 We do this by running the following command:
 
 ```shell
-node tutorial delete --table=tableName1 --id=id
+node ./dist/tutorial delete --table=tableName1 --id=id
 ```
 
 The parameters are as follows:
@@ -204,7 +204,7 @@ The parameters are as follows:
 ### Examples
 
 ```shell
-node tutorial delete --table=people --id=LUHSS9TXSQAUVEQSPVSRIEFDSEKPSQWCGDORXMIWNKBNUJFALFKTSDLFTPWMGXOTFRVNMIC9DLUO99999
+node ./dist/tutorial delete --table=people --id=LUHSS9TXSQAUVEQSPVSRIEFDSEKPSQWCGDORXMIWNKBNUJFALFKTSDLFTPWMGXOTFRVNMIC9DLUO99999
 ```
 
 

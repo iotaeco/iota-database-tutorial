@@ -17,6 +17,8 @@ const iota = new IOTA({
     provider: "http://nodes.iota.fm:80"
 });
 
+const configFile = "./data/db-config.json";
+
 /**
  * Attach the ccurl proof of work algorithm.
  */
@@ -56,7 +58,7 @@ iota.api.attachToTangle = ccurlAttachToTangle;
         } else if (argv._.indexOf("delete") >= 0) {
             await deleteItem(argv.table, argv.id);
         } else {
-            throw(`Please specify one of the following commands [init].`);
+            throw new Error(`Please specify one of the following commands [init].`);
         }
     } catch (err) {
         logError(err);
@@ -74,11 +76,11 @@ async function init(seed: string, tables: string): Promise<Configuration> {
         logInfo(`command: Initialise`);
 
         if (!iota.valid.isTrytes(seed, 81)) {
-            throw(`ERROR seed is not valid: ${seed}`);
+            throw new Error(`ERROR seed is not valid: ${seed}`);
         }
 
         if (!tables || tables.length === 0) {
-            throw(`ERROR tables is not valid: ${tables}`);
+            throw new Error(`ERROR tables is not valid: ${tables}`);
         }
 
         const tablesList = tables.split(",").map(t => t.trim());
@@ -114,7 +116,7 @@ async function init(seed: string, tables: string): Promise<Configuration> {
 
         return config;
     } catch (err) {
-        throw(`ERROR Unable to initialise database:\n\n${err.stack}`);
+        throw new Error(`ERROR Unable to initialise database:\n\n${err.stack}`);
     }
 }
 
@@ -128,13 +130,13 @@ async function index(table: string): Promise<string[]> {
         logInfo(`command: index`);
 
         if (!table || table.length === 0) {
-            throw(`ERROR table is not valid: ${table}`);
+            throw new Error(`ERROR table is not valid: ${table}`);
         }
 
         const config = await readConfigFile();
 
         if (!config[table]) {
-            throw(`ERROR table '${table}' does not exits in db-config.json`);
+            throw new Error(`ERROR table '${table}' does not exits in db-config.json`);
         }
 
         const index = await loadIndex(config[table].currentIndex);
@@ -148,7 +150,7 @@ async function index(table: string): Promise<string[]> {
 
         return index;
     } catch (err) {
-        throw(`ERROR Unable to load database table index:\n\n${err.stack}`);
+        throw new Error(`ERROR Unable to load database table index:\n\n${err.stack}`);
     }
 }
 
@@ -163,13 +165,13 @@ async function readItem(table: string, ids?: string): Promise<any[]> {
         logInfo(`command: read`);
 
         if (!table || table.length === 0) {
-            throw(`ERROR table is not valid: ${table}`);
+            throw new Error(`ERROR table is not valid: ${table}`);
         }
 
         const config = await readConfigFile();
 
         if (!config[table]) {
-            throw(`ERROR table '${table}' does not exits in db-config.json`);
+            throw new Error(`ERROR table '${table}' does not exits in db-config.json`);
         }
 
         let index;
@@ -206,7 +208,7 @@ async function readItem(table: string, ids?: string): Promise<any[]> {
 
         return objs;
     } catch (err) {
-        throw(`ERROR Unable to read item:\n\n${err.stack}`);
+        throw new Error(`ERROR Unable to read item:\n\n${err.stack}`);
     }
 }
 
@@ -225,21 +227,21 @@ async function createOrUpdateItem(table: string, data: string, id?: string, tag:
         tag = ((tag || "") + "9".repeat(27)).substr(0, 27);
 
         if (!table || table.length === 0) {
-            throw(`ERROR table is not valid: ${table}`);
+            throw new Error(`ERROR table is not valid: ${table}`);
         }
 
         if (!data || data.length === 0) {
-            throw(`ERROR data is not valid: ${data}`);
+            throw new Error(`ERROR data is not valid: ${data}`);
         }
 
         if (!iota.valid.isTrytes(tag, 27)) {
-            throw(`ERROR tag is not valid: ${tag}`);
+            throw new Error(`ERROR tag is not valid: ${tag}`);
         }
 
         const config = await readConfigFile();
 
         if (!config[table]) {
-            throw(`ERROR table '${table}' does not exits in db-config.json`);
+            throw new Error(`ERROR table '${table}' does not exits in db-config.json`);
         }
 
         logProgress(`Reading ${data}`);
@@ -288,7 +290,7 @@ async function createOrUpdateItem(table: string, data: string, id?: string, tag:
 
         return txObjects[0].bundle;
     } catch (err) {
-        throw(`ERROR Unable to ${id ? "update" : "add"} item to the database:\n\n${err.stack}`);
+        throw new Error(`ERROR Unable to ${id ? "update" : "add"} item to the database:\n\n${err.stack}`);
     }
 }
 
@@ -302,17 +304,17 @@ async function deleteItem(table: string, id: string): Promise<void> {
         logInfo(`command: delete`);
 
         if (!table || table.length === 0) {
-            throw(`ERROR table is not valid: ${table}`);
+            throw new Error(`ERROR table is not valid: ${table}`);
         }
 
         if (!id || id.length === 0) {
-            throw(`ERROR id is not valid: ${id}`);
+            throw new Error(`ERROR id is not valid: ${id}`);
         }
 
         const config = await readConfigFile();
 
         if (!config[table]) {
-            throw(`ERROR table '${table}' does not exits in db-config.json`);
+            throw new Error(`ERROR table '${table}' does not exits in db-config.json`);
         }
 
         const index = await loadIndex(config[table].currentIndex);
@@ -332,7 +334,7 @@ async function deleteItem(table: string, id: string): Promise<void> {
             logSuccess(`Item ${id} is not in the current index.`);
         }
     } catch (err) {
-        throw(`ERROR Unable to remove item from the database:\n\n${err.stack}`);
+        throw new Error(`ERROR Unable to remove item from the database:\n\n${err.stack}`);
     }
 }
 
@@ -389,7 +391,7 @@ async function saveIndex(indexAddress: string, index: string[]): Promise<string>
  */
 async function writeConfigFile(config: Configuration): Promise<void> {
     logProgress(`Writing db-config.json`);
-    await util.promisify(fs.writeFile)("./db-config.json", JSON.stringify(config, undefined, "\t"));
+    await util.promisify(fs.writeFile)(configFile, JSON.stringify(config, undefined, "\t"));
 }
 
 /**
@@ -398,7 +400,7 @@ async function writeConfigFile(config: Configuration): Promise<void> {
  */
 async function readConfigFile(): Promise<Configuration> {
     logProgress(`Reading db-config.json`);
-    const file = await util.promisify(fs.readFile)("./db-config.json");
+    const file = await util.promisify(fs.readFile)(configFile);
     return JSON.parse(file.toString());
 }
 
@@ -412,7 +414,7 @@ function ccurlAttachToTangle(
     trytes: string,
     callback: (err: Error, result: string) => void
 ): void {
-    const ccurlPath = path.join(__dirname, 'binaries', os.platform());
+    const ccurlPath = path.join(__dirname, "../", 'binaries', os.platform());
     ccurl(
         trunkTransaction,
         branchTransaction,
