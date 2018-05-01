@@ -8,6 +8,7 @@ import * as path from "path";
 import * as util from "util";
 import * as iotaAsync from "./iota.lib.async";
 import { Configuration } from "./configuration";
+import { DataTableIndex } from "./dataTableIndex";
 
 /**
  * Create the iota instance.
@@ -123,9 +124,9 @@ async function init(seed: string, tables: string): Promise<Configuration> {
 /**
  * Retrieve the index for the database table from the tangle.
  * @param table The name of the table to retreive the index for.
- * @returns The table index hashes.
+ * @returns The table index hashes and previous index address.
  */
-async function index(table: string): Promise<string[]> {
+async function index(table: string): Promise<DataTableIndex> {
     try {
         logInfo(`command: index`);
 
@@ -141,9 +142,9 @@ async function index(table: string): Promise<string[]> {
 
         const index = await loadIndex(config[table].currentIndex);
 
-        if (index && index.length > 0) {
+        if (index.bundles.length > 0) {
             logSuccess(`Index hashes:`);
-            logSuccess(`\t${index.join("\n\t")}`);
+            logSuccess(`\t${index.bundles.join("\n\t")}`);
         } else {
             logSuccess("No index.");
         }
@@ -267,18 +268,18 @@ async function createOrUpdateItem(table: string, data: string, id?: string, tag:
         const index = await loadIndex(config[table].currentIndex);
 
         if (id) {
-            const idx = index.indexOf(id);
+            const idx = index.bundles.indexOf(id);
             if (idx >= 0) {
                 logProgress(`Removing old hash from the index`);
-                index.splice(idx, 1);
+                index.bundles.splice(idx, 1);
             }
         }
 
         logProgress(`Adding new hash to the index`);
 
-        index.push(txObjects[0].bundle);
+        index.bundles.push(txObjects[0].bundle);
 
-        config[table].currentIndex = await saveIndex(config[table].indexAddress, index);
+        config[table].currentIndex = await saveIndex(config[table].indexAddress, index, config[table].currentIndex);
 
         await writeConfigFile(config);
 
@@ -319,13 +320,13 @@ async function deleteItem(table: string, id: string): Promise<void> {
 
         const index = await loadIndex(config[table].currentIndex);
 
-        const idx = index.indexOf(id);
+        const idx = index.bundles.indexOf(id);
         if (idx >= 0) {
             logProgress(`Removing hash from the index`);
     
-            index.splice(idx, 1);
+            index.bundles.splice(idx, 1);
 
-            config[table].currentIndex = await saveIndex(config[table].indexAddress, index);
+            config[table].currentIndex = await saveIndex(config[table].indexAddress, index, config[table].currentIndex);
 
             await writeConfigFile(config);
 
@@ -343,11 +344,14 @@ async function deleteItem(table: string, id: string): Promise<void> {
  * @param tableIndexHash The hash of the table index to load.
  * @returns The table index.
  */
-async function loadIndex(tableIndexHash: string): Promise<string[]> {
+async function loadIndex(tableIndexHash: string): Promise<DataTableIndex> {
     logProgress(`Loading Index from the Tangle`);
 
     if (!tableIndexHash || tableIndexHash.length === 0) {
-        return [];
+        return {
+            bundles: [],
+            lastIdx: "9".repeat(81)
+        };
     } else {
         const txObjects = await iotaAsync.findTransactionObjectsAsync(iota,
             { bundles: [tableIndexHash] }
@@ -357,9 +361,11 @@ async function loadIndex(tableIndexHash: string): Promise<string[]> {
 
         const json = iota.utils.extractJson(txObjects);
 
-        const obj = JSON.parse(json);
+        let obj = JSON.parse(json) || {};
 
-        return (obj ? obj.indexes : undefined) || [];
+        obj.bundles = obj.bundles || [];
+
+        return obj;
     }
 }
 
@@ -367,17 +373,20 @@ async function loadIndex(tableIndexHash: string): Promise<string[]> {
  * Save an index to the tangle.
  * @param indexAddress The address where the table index is stored. 
  * @param index The index to save.
+ * @param currentIndex The current index hash.
  * @returns The hash of the new index.
  */
-async function saveIndex(indexAddress: string, index: string[]): Promise<string> {
+async function saveIndex(indexAddress: string, index: DataTableIndex, currentIndex: string): Promise<string> {
     logProgress(`Saving Index to the Tangle`);
+
+    index.lastIdx = currentIndex || "9".repeat(81);
 
     logProgress(`Performing Proof of Work`);
     const txObjects = await iotaAsync.sendTransferAsync(iota, "", 1, 15, [
         {
             address: indexAddress,
             value: 0,
-            message: iota.utils.toTrytes(JSON.stringify({ indexes: index })),
+            message: iota.utils.toTrytes(JSON.stringify(index)),
             tag: "INDEX9999999999999999999999"
         }
     ]);
