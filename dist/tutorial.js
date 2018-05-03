@@ -145,13 +145,13 @@ async function readItem(table, ids) {
         }
         let index;
         if (ids) {
-            index = ids.split(",");
+            index = { bundles: ids.split(","), lastIdx: "" };
         }
         else {
             index = await loadIndex(config[table].currentIndex);
         }
         logProgress(`Reading items from Tangle`);
-        const txObjects = await iotaAsync.findTransactionObjectsAsync(iota, { bundles: index });
+        const txObjects = await iotaAsync.findTransactionObjectsAsync(iota, { bundles: index.bundles });
         const bundles = {};
         txObjects.forEach(tx => {
             bundles[tx.bundle] = bundles[tx.bundle] || [];
@@ -159,8 +159,18 @@ async function readItem(table, ids) {
         });
         const objs = [];
         Object.keys(bundles).forEach(hash => {
-            bundles[hash].sort((a, b) => a.currentIndex - b.currentIndex);
-            const json = iota.utils.extractJson(bundles[hash]);
+            // We only want one transaction from the bundle not reattachments
+            // Sort all the transactions by timestamp so we can just get earliest
+            bundles[hash].sort((a, b) => a.attachmentTimestamp - b.attachmentTimestamp);
+            // Now look at the first entry and see how many parts it has
+            const numParts = bundles[hash][0].lastIndex;
+            // Grab that amount of entries
+            const finalEntries = bundles[hash].slice(0, numParts + 1);
+            // Sort each of the bundle transactions by index
+            finalEntries.sort((a, b) => {
+                return a.currentIndex - b.currentIndex;
+            });
+            const json = iota.utils.extractJson(finalEntries);
             const data = decodeNonASCII(json);
             objs.push(JSON.parse(data));
             logInfo(`Item: ${hash}`);

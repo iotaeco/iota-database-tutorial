@@ -5,13 +5,17 @@ export interface TransactionObject {
     signatureMessageFragment: string;
     address: string;
     value: number;
-    tag: string;
+    obsoleteTag: string;
     timestamp: number;
     currentIndex: number;
     lastIndex: number;
     bundle: string;
     trunkTransaction: string;
     branchTransaction: string;
+    tag: string;
+    attachmentTimestamp: number;
+    attachmentTimestampLowerBound: number;
+    attachmentTimestampUpperBound: number;
     nonce: string;
 }
 
