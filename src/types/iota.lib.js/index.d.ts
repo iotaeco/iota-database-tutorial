@@ -2,10 +2,10 @@
  * Declations for iota.lib.js.
  */
 export interface IOTA {
-    api: IotaApi;
-    utils: IotaUtils;
-    multisig: IotaMultisig;
-    valid: IotaValid;
+    api: IIotaApi;
+    utils: IIotaUtils;
+    multisig: IIotaMultisig;
+    valid: IIotaValid;
 
     version: string;
 
@@ -94,7 +94,7 @@ export interface IIriApi {
     storeTransactions(trytes: string[], callback: (error: Error, response: {}) => void): void;
 }
 
-export interface IotaApi extends IIriApi {
+export interface IIotaApi extends IIriApi {
     getTransactionsObjects(hashes: string[],
                             callback?: (error: Error, transactions: ITransactionObject[]) => void): void;
     findTransactionObjects(searchValues: { hashes?: string[]; bundles?: string[]; tags?: string[]; approvees?: string[] },
@@ -130,7 +130,7 @@ export interface IotaApi extends IIriApi {
                     callback?: (error: Error, response: boolean | boolean[]) => void): void;
 }
 
-export interface IotaUtils {
+export interface IIotaUtils {
     convertUnits(value: number, fromUnit: IOTAUnit, toUnit: IOTAUnit): number;
     addChecksum(inputValue: string, checksumLength: number, isAddress: boolean): string;
     addChecksum(inputValue: string[], checksumLength: number, isAddress: boolean): string[];
@@ -147,7 +147,7 @@ export interface IotaUtils {
     isBundle(bundle: ITransactionObject[]): boolean;
 }
 
-export interface IotaMultisig {
+export interface IIotaMultisig {
     getKey(seed: string, index: number, security: Security): string;
     getDigest(seed: string, index: number, security: Security): string;
     address(digestTrytes: string | string[]): IMultisigAddress;
@@ -163,7 +163,7 @@ export interface IMultisigAddress {
     finalize(): string;
 }
 
-export interface IotaValid {
+export interface IIotaValid {
     isAddress(address: string): boolean;
     isTrytes(trytes: string, length?: number): boolean;
     isValue(value: any): boolean;
