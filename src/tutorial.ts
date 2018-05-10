@@ -212,8 +212,8 @@ async function createOrUpdateItem(table: string, data: string, id?: string, tag:
             throw new Error(`ERROR data is not valid: ${data}`);
         }
 
-        if (!iota.valid.isTrytes(tag, 27)) {
-            throw new Error(`ERROR tag is not valid: ${tag}`);
+        if (!iota.valid.isTrytes(finalTag, 27)) {
+            throw new Error(`ERROR tag is not valid: ${finalTag}`);
         }
 
         const config = await readConfigFile();

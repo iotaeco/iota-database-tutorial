@@ -3,6 +3,14 @@
         "target": "esnext",
         "module": "commonjs",
         "moduleResolution": "node",
-        "outDir": "./dist/"
+        "outDir": "./dist/",
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "strictNullChecks": false,
+        "stripInternal": true,
+        "inlineSourceMap": true,
+        "noImplicitUseStrict": true
     }
 }
