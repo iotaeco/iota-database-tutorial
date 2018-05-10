@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.3
+
+* Added linting
+* Fixed read index processed multiple transactions correctly
+* Minor refactoring
+* TypeScript improved typings
+
 ## v1.0.2
 
 * Fixed read item not paying attention to restructured table index

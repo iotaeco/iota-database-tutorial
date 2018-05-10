@@ -8,59 +8,50 @@ const minimist = require("minimist");
 const os = require("os");
 const path = require("path");
 const util = require("util");
-const iotaAsync = require("./iota.lib.async");
+const iotaHelper_1 = require("./helpers/iotaHelper");
 /**
  * Create the iota instance.
  */
 const iota = new IOTA({
-    //provider: "http://iotanode.host:14265"
     provider: "http://nodes.iota.fm:80"
 });
+attachCcurl(iota);
 const configFile = "./data/db-config.json";
-/**
- * Attach the ccurl proof of work algorithm.
- */
-iota.api.attachToTangle = ccurlAttachToTangle;
 /**
  * Process the command line options.
  */
-(async function () {
+async function tutorial() {
     logBanner(`IOTA Database Tutorial`);
     logBanner(`======================`);
     logBanner(``);
     const argv = minimist(process.argv.slice(2));
-    try {
-        if (argv._.indexOf("init") >= 0) {
-            await init(argv.seed, argv.tables);
-        }
-        else if (argv._.indexOf("index") >= 0) {
-            await index(argv.table);
-        }
-        else if (argv._.indexOf("create") >= 0) {
-            await createOrUpdateItem(argv.table, argv.data, undefined, argv.tag);
-        }
-        else if (argv._.indexOf("update") >= 0) {
-            await createOrUpdateItem(argv.table, argv.data, argv.id, argv.tag);
-        }
-        else if (argv._.indexOf("read") >= 0) {
-            await readItem(argv.table, argv.ids);
-        }
-        else if (argv._.indexOf("delete") >= 0) {
-            await deleteItem(argv.table, argv.id);
-        }
-        else {
-            throw new Error(`Please specify one of the following commands [init].`);
-        }
+    if (argv._.indexOf("init") >= 0) {
+        await init(argv.seed, argv.tables);
     }
-    catch (err) {
-        logError(err);
+    else if (argv._.indexOf("index") >= 0) {
+        await index(argv.table);
     }
-})();
+    else if (argv._.indexOf("create") >= 0) {
+        await createOrUpdateItem(argv.table, argv.data, undefined, argv.tag);
+    }
+    else if (argv._.indexOf("update") >= 0) {
+        await createOrUpdateItem(argv.table, argv.data, argv.id, argv.tag);
+    }
+    else if (argv._.indexOf("read") >= 0) {
+        await readItem(argv.table, argv.ids);
+    }
+    else if (argv._.indexOf("delete") >= 0) {
+        await deleteItem(argv.table, argv.id);
+    }
+    else {
+        throw new Error(`Please specify one of the following commands [init].`);
+    }
+}
 /**
  * Initialise the database.
  * @param seed The seed to create the addresses from.
  * @param tables The name of the tables to create.
- * @return The configuration object.
+ * @returns The configuration object.
  */
 async function init(seed, tables) {
     try {
@@ -76,7 +67,7 @@ async function init(seed, tables) {
         logInfo(`tables: ${tablesList.join(", ")}`);
         logProgress(`Generating Addresses`);
         const config = {};
-        const addresses = await iotaAsync.getNewAddressAsync(iota, seed, {
+        const addresses = await iotaHelper_1.IotaHelper.getNewAddressAsync(iota, seed, {
             total: tablesList.length * 2,
             security: 2
         });
@@ -113,15 +104,15 @@ async function index(table) {
         if (!config[table]) {
             throw new Error(`ERROR table '${table}' does not exits in db-config.json`);
         }
-        const index = await loadIndex(config[table].currentIndex);
-        if (index.bundles.length > 0) {
+        const loadedIndex = await loadIndex(config[table].currentIndex);
+        if (loadedIndex.bundles.length > 0) {
             logSuccess(`Index hashes:`);
-            logSuccess(`\t${index.bundles.join("\n\t")}`);
+            logSuccess(`\t${loadedIndex.bundles.join("\n\t")}`);
         }
         else {
             logSuccess("No index.");
         }
-        return index;
+        return loadedIndex;
     }
     catch (err) {
         throw new Error(`ERROR Unable to load database table index:\n\n${err.stack}`);
@@ -143,38 +134,18 @@ async function readItem(table, ids) {
         if (!config[table]) {
             throw new Error(`ERROR table '${table}' does not exits in db-config.json`);
         }
-        let index;
+        let loadedIndex;
         if (ids) {
-            index = { bundles: ids.split(","), lastIdx: "" };
+            loadedIndex = { bundles: ids.split(","), lastIdx: "" };
         }
         else {
-            index = await loadIndex(config[table].currentIndex);
+            loadedIndex = await loadIndex(config[table].currentIndex);
         }
         logProgress(`Reading items from Tangle`);
-        const txObjects = await iotaAsync.findTransactionObjectsAsync(iota, { bundles: index.bundles });
-        const bundles = {};
-        txObjects.forEach(tx => {
-            bundles[tx.bundle] = bundles[tx.bundle] || [];
-            bundles[tx.bundle].push(tx);
-        });
-        const objs = [];
-        Object.keys(bundles).forEach(hash => {
-            // We only want one transaction from the bundle not reattachments
-            // Sort all the transactions by timestamp so we can just get earliest
-            bundles[hash].sort((a, b) => a.attachmentTimestamp - b.attachmentTimestamp);
-            // Now look at the first entry and see how many parts it has
-            const numParts = bundles[hash][0].lastIndex;
-            // Grab that amount of entries
-            const finalEntries = bundles[hash].slice(0, numParts + 1);
-            // Sort each of the bundle transactions by index
-            finalEntries.sort((a, b) => {
-                return a.currentIndex - b.currentIndex;
-            });
-            const json = iota.utils.extractJson(finalEntries);
-            const data = decodeNonASCII(json);
-            objs.push(JSON.parse(data));
-            logInfo(`Item: ${hash}`);
-            logInfo(`${data}`);
+        const txObjects = await iotaHelper_1.IotaHelper.findTransactionObjectsAsync(iota, { bundles: loadedIndex.bundles });
+        const objs = iotaHelper_1.IotaHelper.extractBundles(iota, txObjects);
+        objs.forEach(obj => {
+            logInfo(JSON.stringify(obj, undefined, "\t"));
         });
         return objs;
     }
@@ -193,7 +164,7 @@ async function readItem(table, ids) {
 async function createOrUpdateItem(table, data, id, tag = "") {
     try {
         logInfo(`command: ${id ? "update" : "create"}`);
-        tag = ((tag || "") + "9".repeat(27)).substr(0, 27);
+        const finalTag = ((tag || "") + "9".repeat(27)).substr(0, 27);
         if (!table || table.length === 0) {
             throw new Error(`ERROR table is not valid: ${table}`);
         }
@@ -209,29 +180,29 @@ async function createOrUpdateItem(table, data, id, tag = "") {
         }
         logProgress(`Reading ${data}`);
         const jsonFile = await util.promisify(fs.readFile)(data);
-        const ascii = encodeNonASCII(jsonFile.toString());
+        const ascii = iotaHelper_1.IotaHelper.encodeNonASCII(jsonFile.toString());
         logProgress(`Adding Data to Tangle`);
         logProgress(`Performing Proof of Work`);
-        const txObjects = await iotaAsync.sendTransferAsync(iota, "", 1, 15, [
+        const txObjects = await iotaHelper_1.IotaHelper.sendTransferAsync(iota, "", 1, 15, [
             {
                 address: config[table].dataAddress,
                 value: 0,
                 message: iota.utils.toTrytes(ascii),
-                tag
+                tag: finalTag
             }
         ]);
         logProgress(`Item saved as bundle '${txObjects[0].bundle}'`);
-        const index = await loadIndex(config[table].currentIndex);
+        const loadedIndex = await loadIndex(config[table].currentIndex);
         if (id) {
-            const idx = index.bundles.indexOf(id);
+            const idx = loadedIndex.bundles.indexOf(id);
             if (idx >= 0) {
                 logProgress(`Removing old hash from the index`);
-                index.bundles.splice(idx, 1);
+                loadedIndex.bundles.splice(idx, 1);
             }
         }
         logProgress(`Adding new hash to the index`);
-        index.bundles.push(txObjects[0].bundle);
-        config[table].currentIndex = await saveIndex(config[table].indexAddress, index, config[table].currentIndex);
+        loadedIndex.bundles.push(txObjects[0].bundle);
+        config[table].currentIndex = await saveIndex(config[table].indexAddress, loadedIndex, config[table].currentIndex);
         await writeConfigFile(config);
         logSuccess(`Item ${id ? "updated" : "added"}, you should be able to see the data on the tangle at the following link.`);
         logSuccess(`\tFirst Tx: https://thetangle.org/transaction/${txObjects[0].hash}`);
@@ -262,12 +233,12 @@ async function deleteItem(table, id) {
         if (!config[table]) {
             throw new Error(`ERROR table '${table}' does not exits in db-config.json`);
         }
-        const index = await loadIndex(config[table].currentIndex);
-        const idx = index.bundles.indexOf(id);
+        const loadedIndex = await loadIndex(config[table].currentIndex);
+        const idx = loadedIndex.bundles.indexOf(id);
         if (idx >= 0) {
             logProgress(`Removing hash from the index`);
-            index.bundles.splice(idx, 1);
-            config[table].currentIndex = await saveIndex(config[table].indexAddress, index, config[table].currentIndex);
+            loadedIndex.bundles.splice(idx, 1);
+            config[table].currentIndex = await saveIndex(config[table].indexAddress, loadedIndex, config[table].currentIndex);
             await writeConfigFile(config);
             logSuccess(`Deleted Item ${id}.`);
         }
@@ -293,30 +264,36 @@ async function loadIndex(tableIndexHash) {
         };
     }
     else {
-        const txObjects = await iotaAsync.findTransactionObjectsAsync(iota, { bundles: [tableIndexHash] });
-        txObjects.sort((a, b) => a.currentIndex - b.currentIndex);
-        const json = iota.utils.extractJson(txObjects);
-        let obj = JSON.parse(json) || {};
-        obj.bundles = obj.bundles || [];
-        return obj;
+        const txObjects = await iotaHelper_1.IotaHelper.findTransactionObjectsAsync(iota, { bundles: [tableIndexHash] });
+        const indexes = iotaHelper_1.IotaHelper.extractBundles(iota, txObjects);
+        if (indexes && indexes.length > 0) {
+            indexes[0].bundles = indexes[0].bundles || [];
+            return indexes[0];
+        }
+        else {
+            return {
+                bundles: [],
+                lastIdx: "9".repeat(81)
+            };
+        }
     }
 }
 /**
  * Save an index to the tangle.
  * @param indexAddress The address where the table index is stored.
- * @param index The index to save.
+ * @param saveIdx The index to save.
  * @param currentIndex The current index hash.
  * @returns The hash of the new index.
  */
-async function saveIndex(indexAddress, index, currentIndex) {
+async function saveIndex(indexAddress, saveIdx, currentIndex) {
     logProgress(`Saving Index to the Tangle`);
-    index.lastIdx = currentIndex || "9".repeat(81);
+    saveIdx.lastIdx = currentIndex || "9".repeat(81);
     logProgress(`Performing Proof of Work`);
-    const txObjects = await iotaAsync.sendTransferAsync(iota, "", 1, 15, [
+    const txObjects = await iotaHelper_1.IotaHelper.sendTransferAsync(iota, "", 1, 15, [
         {
             address: indexAddress,
             value: 0,
-            message: iota.utils.toTrytes(JSON.stringify(index)),
+            message: iota.utils.toTrytes(JSON.stringify(saveIdx)),
             tag: "INDEX9999999999999999999999"
         }
     ]);
@@ -324,15 +301,15 @@ async function saveIndex(indexAddress, index, currentIndex) {
 }
 /**
  * Write the configuration to a file.
- * @param configuration The configuration to save.
+ * @param config The configuration to save.
  */
 async function writeConfigFile(config) {
     logProgress(`Writing db-config.json`);
     await util.promisify(fs.writeFile)(configFile, JSON.stringify(config, undefined, "\t"));
 }
 /**
- * Read the confiuration from a file.
- * @return The configuration.
+ * Read the configuration from a file.
+ * @returns The configuration.
  */
 async function readConfigFile() {
     logProgress(`Reading db-config.json`);
@@ -340,33 +317,11 @@ async function readConfigFile() {
     return JSON.parse(file.toString());
 }
 /**
- * Perform proof of work using CCurl.
- */
-function ccurlAttachToTangle(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
-    const ccurlPath = path.join(__dirname, "../", 'binaries', os.platform());
-    ccurl(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, ccurlPath, (error, success) => {
-        return callback(error, success);
-    });
-}
-/**
- * Encode Non ASCII characters to escaped characters.
- * @param value The value to encode.
- */
-function encodeNonASCII(value) {
-    return value ? value.replace(/[\u007F-\uFFFF]/g, (chr) => `\\u${(`0000${chr.charCodeAt(0).toString(16)}`).substr(-4)}`) : undefined;
-}
-/**
- * Decode escaped Non ASCII characters.
- * @param value The value to decode.
- */
-function decodeNonASCII(value) {
-    return value ? value.replace(/\\u([\d\w]{4})/gi, (match, grp) => String.fromCharCode(parseInt(grp, 16))) : undefined;
-}
-/**
  * Log message as banner text.
  * @param message The message to log.
  */
 function logBanner(message) {
+    // tslint:disable-next-line:no-console
     console.log(chalk_1.default.green(message));
 }
 /**
@@ -374,6 +329,7 @@ function logBanner(message) {
  * @param message The message to log.
  */
 function logInfo(message) {
+    // tslint:disable-next-line:no-console
     console.info(chalk_1.default.cyan(message));
 }
 /**
@@ -388,6 +344,7 @@ function logError(message) {
  * @param message The message to log.
  */
 function logSuccess(message) {
+    // tslint:disable-next-line:no-console
     console.log(chalk_1.default.green(message));
 }
 /**
@@ -397,3 +354,25 @@ function logSuccess(message) {
 function logProgress(message) {
     console.error(chalk_1.default.yellow(`\n${message}`));
 }
+/**
+ * Attach the ccurl proof of work algorithm.
+ * @param iotaInstance The iota lib object.
+ */
+function attachCcurl(iotaInstance) {
+    iota.api.attachToTangle = ccurlAttachToTangle;
+}
+/**
+ * Perform proof of work using CCurl.
+ * @param trunkTransaction The trunk transaction.
+ * @param branchTransaction The branch transaction.
+ * @param minWeightMagnitude The minimum weight magnitude transaction.
+ * @param trytes The trytes to perform pow on.
+ * @param callback The callback
+ */
+function ccurlAttachToTangle(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, callback) {
+    const ccurlPath = path.join(__dirname, "../", "binaries", os.platform());
+    ccurl(trunkTransaction, branchTransaction, minWeightMagnitude, trytes, ccurlPath, callback);
+}
+tutorial()
+    .then(() => logInfo("Success"))
+    .catch(logError);

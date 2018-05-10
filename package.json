@@ -1,10 +1,13 @@
 {
     "name": "iota-database-tutorial",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Use IOTA Tangle as a storage mechanism like a database.",
     "main": "./dist/tutorial.js",
     "scripts": {
-        "build": "tsc"
+        "build-clean": "rimraf -rf ./dist",
+        "build-compile": "tsc",
+        "build-lint": "tslint -p ./tsconfig.json -c ./tslint.json -t verbose",
+        "build": "npm-run-all build-clean build-compile build-lint"
     },
     "author": "martyn@iota.eco",
     "license": "MIT",
@@ -17,6 +20,12 @@
     "devDependencies": {
         "@types/chalk": "^2.2.0",
         "@types/minimist": "^1.2.0",
-        "@types/node": "^9.6.6"
+        "@types/node": "^9.6.6",
+        "npm-run-all": "^4.1.3",
+        "rimraf": "^2.6.2",
+        "tslint": "^5.10.0",
+        "tslint-eslint-rules": "^5.1.0",
+        "tslint-microsoft-contrib": "^5.0.3",
+        "typescript": "^2.8.3"
     }
 }
