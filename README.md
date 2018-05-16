@@ -1,5 +1,7 @@
 # IOTA Database Tutorial
 
+The code in this repository is to supplement the following article [https://medium.com/@iota.eco/iota-ecosytem-fund-tracker-storage-dd8c90b7c4ea](https://medium.com/@iota.eco/iota-ecosytem-fund-tracker-storage-dd8c90b7c4ea)
+
 This tutorial is designed to run as a command line tool on NodeJS, there is no UI for it.
 
 ## Installation
