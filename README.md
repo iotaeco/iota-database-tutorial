@@ -207,6 +207,9 @@ The parameters are as follows:
 node ./dist/tutorial delete --table=people --id=LUHSS9TXSQAUVEQSPVSRIEFDSEKPSQWCGDORXMIWNKBNUJFALFKTSDLFTPWMGXOTFRVNMIC9DLUO99999
 ```
 
+## RSA Signing
+
+Both the indexes and data transactions are signed and verified with RSA-SHA256. The public and private keys can be found in ./data/pub.key and ./data/priv.key respectively, you can replace these with your own keys.
 
 # License
 

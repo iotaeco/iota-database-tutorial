@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.4
+
+* Added RSA-SHA256 Signing and verification
+
 ## v1.0.3
 
 * Added linting

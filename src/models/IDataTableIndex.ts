@@ -4,4 +4,5 @@
 export interface IDataTableIndex {
     bundles: string[];
     lastIdx: string;
+    sig?: string;
 }

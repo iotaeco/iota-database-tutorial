@@ -1,6 +1,6 @@
 {
     "name": "iota-database-tutorial",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "Use IOTA Tangle as a storage mechanism like a database.",
     "main": "./dist/tutorial.js",
     "scripts": {

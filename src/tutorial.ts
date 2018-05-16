@@ -1,5 +1,6 @@
 import * as ccurl from "ccurl.interface.js";
 import chalk from "chalk";
+import * as crypto from "crypto";
 import * as fs from "fs";
 import * as IOTA from "iota.lib.js";
 import * as minimist from "minimist";
@@ -20,6 +21,8 @@ const iota = new IOTA({
 attachCcurl(iota);
 
 const configFile = "./data/db-config.json";
+const pubKeyFile = "./data/pub.key";
+const privKeyFile = "./data/priv.key";
 
 /**
  * Process the command line options.
@@ -180,9 +183,13 @@ async function readItem(table: string, ids?: string): Promise<any[]> {
 
         const objs = IotaHelper.extractBundles(iota, txObjects);
 
-        objs.forEach(obj => {
-            logInfo(JSON.stringify(obj, undefined, "\t"));
-        });
+        for (let i = 0; i < objs.length; i++) {
+            const verified = await verifyData(objs[i]);
+            if (!verified) {
+                throw new Error("ERROR Signature on item is invalid");
+            }
+            logInfo(JSON.stringify(objs[i], undefined, "\t"));
+        }
 
         return objs;
     } catch (err) {
@@ -226,7 +233,11 @@ async function createOrUpdateItem(table: string, data: string, id?: string, tag:
 
         const jsonFile = await util.promisify(fs.readFile)(data);
 
-        const ascii = IotaHelper.encodeNonASCII(jsonFile.toString());
+        const obj = JSON.parse(jsonFile.toString());
+
+        obj.sig = await signData(obj);
+
+        const ascii = IotaHelper.encodeNonASCII(JSON.stringify(obj));
 
         logProgress(`Adding Data to Tangle`);
 
@@ -327,7 +338,7 @@ async function loadIndex(tableIndexHash: string): Promise<IDataTableIndex> {
     if (!tableIndexHash || tableIndexHash.length === 0) {
         return {
             bundles: [],
-            lastIdx: "9".repeat(81)
+            lastIdx: undefined
         };
     } else {
         const txObjects = await IotaHelper.findTransactionObjectsAsync(
@@ -338,12 +349,19 @@ async function loadIndex(tableIndexHash: string): Promise<IDataTableIndex> {
         const indexes = IotaHelper.extractBundles<IDataTableIndex>(iota, txObjects);
 
         if (indexes && indexes.length > 0) {
-            indexes[0].bundles = indexes[0].bundles || [];
-            return indexes[0];
+            const currentIndex = indexes[0];
+            const verified = await verifyData(currentIndex);
+
+            if (!verified) {
+                throw(new Error("ERROR Signature on index is invalid"));
+            }
+
+            currentIndex.bundles = currentIndex.bundles || [];
+            return currentIndex;
         } else {
             return {
                 bundles: [],
-                lastIdx: "9".repeat(81)
+                lastIdx: undefined
             };
         }
     }
@@ -359,7 +377,8 @@ async function loadIndex(tableIndexHash: string): Promise<IDataTableIndex> {
 async function saveIndex(indexAddress: string, saveIdx: IDataTableIndex, currentIndex: string): Promise<string> {
     logProgress(`Saving Index to the Tangle`);
 
-    saveIdx.lastIdx = currentIndex || "9".repeat(81);
+    saveIdx.lastIdx = currentIndex;
+    saveIdx.sig = await signData(saveIdx);
 
     logProgress(`Performing Proof of Work`);
     const txObjects = await IotaHelper.sendTransferAsync(iota, "", 1, 15, [
@@ -391,6 +410,43 @@ async function readConfigFile(): Promise<Configuration> {
     logProgress(`Reading db-config.json`);
     const file = await util.promisify(fs.readFile)(configFile);
     return JSON.parse(file.toString());
+}
+
+/**
+ * Sign the data.
+ * @param data The data to sign.
+ * @returns Signed data.
+ */
+async function signData(data: any): Promise<string> {
+    delete data.sig;
+    const json = JSON.stringify(data);
+
+    const file = await util.promisify(fs.readFile)(privKeyFile);
+
+    const signer = crypto.createSign("RSA-SHA256");
+    signer.update(json);
+    return signer.sign(file.toString(), "hex");
+}
+
+/**
+ * Verify the data.
+ * @param data The data to verify.
+ * @returns True if verified.
+ */
+async function verifyData(data: any): Promise<boolean> {
+    if (!data.sig) {
+        return false;
+    } else {
+        const signature = data.sig;
+        delete data.sig;
+        const json = JSON.stringify(data);
+
+        const publicKey = await util.promisify(fs.readFile)(pubKeyFile);
+
+        const verifier = crypto.createVerify("RSA-SHA256");
+        verifier.update(json);
+        return verifier.verify(publicKey.toString(), signature, "hex");
+    }
 }
 
 /**

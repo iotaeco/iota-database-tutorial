@@ -85,12 +85,16 @@ declare module "iota.lib.js" {
             addNeighbors(uris: string[], callback: (error: Error, addedNeighbors: number) => void): void;
             removeNeighbors(uris: string[], callback: (error: Error, removedNeighbors: number[]) => void): void;
             getTips(callback: (error: Error, hashes: string[]) => void): void;
-            findTransactions(searchValues: string[], callback: (error: Error, hashes: string[]) => void): void;
+            findTransactions(searchValues: { hashes?: string[]; bundles?: string[]; tags?: string[]; approvees?: string[] },
+                callback: (error: Error, hashes: string[]) => void): void;
             getTrytes(hashes: string[], callback: (error: Error, trytes: string[]) => void): void;
             getInclusionStates(transactions: string[], tips: string[], callback: (error: Error, states: boolean[]) => void): void;
-            getBalances(addresses: string[], treshold: number, callback: (error: Error, response: { balances: number[]; milestone: string; milestoneIndex: number; duration: number }) => void): void;
-            getTransactionsToApprove(depth: number, callback: (error: Error, response: { trunkTransaction: string; branchTransaction: string; duration: number }) => void): void;
-            attachToTangle(trunkTransaction: string, branchTransaction: string, minWeightMagnitude: number, trytes: string[], callback: (error: Error, trytes: string[]) => void): void;
+            getBalances(addresses: string[], treshold: number,
+                callback: (error: Error, response: { balances: number[]; milestone: string; milestoneIndex: number; duration: number }) => void): void;
+            getTransactionsToApprove(depth: number,
+                callback: (error: Error, response: { trunkTransaction: string; branchTransaction: string; duration: number }) => void): void;
+            attachToTangle(trunkTransaction: string, branchTransaction: string, minWeightMagnitude: number, trytes: string[],
+                callback: (error: Error, trytes: string[]) => void): void;
             interruptAttachingToTangle(callback: (error: Error, response: {}) => void): void;
             broadcastTransactions(trytes: string[], callback: (error: Error, response: {}) => void): void;
             storeTransactions(trytes: string[], callback: (error: Error, response: {}) => void): void;
@@ -121,13 +125,10 @@ declare module "iota.lib.js" {
                 callback?: (error: Error, response: {}) => void): void;
             getBundle(transactionHash: string,
                 callback?: (error: Error, bundle: ITransactionObject[]) => void): void;
-
             getTransfers(seed: string, options?: { start?: number; end?: number; security?: Security; inclusionStates?: boolean },
                 callback?: (error: Error, transfers: ITransactionObject[][]) => void): void;
-
             getAccountData(seed: string, options?: { start: number; end: number; security?: Security },
                 callback?: (error: Error, response: { latestAddress: string; addresses: string[]; transfers: string[]; inputs: ITransferObject[]; balance: number }) => void): void;
-
             isReattachable(address: string | string[],
                 callback?: (error: Error, response: boolean | boolean[]) => void): void;
         }
